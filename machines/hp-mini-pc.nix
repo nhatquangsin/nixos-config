@@ -160,6 +160,9 @@
     gnumake
     unzip
 
+    # Net tools
+    pkgs.nettools
+
     ghostty
     pkgs.git
     pkgs.vscode
