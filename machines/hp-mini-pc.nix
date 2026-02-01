@@ -90,6 +90,15 @@
     shell = pkgs.zsh;
   };
 
+  users.users.quang = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDcf5viA9mrgmF0oziA7ab4+Rx+Rw2JuwQ394uQTyaxb quangtruong@MacBookPro"
+    ];
+  };
+
   # Install firefox.
   programs.firefox.enable = true;
 
@@ -121,6 +130,9 @@
     enable = true;
     clock24 = true;
   };
+
+  # Install tailscale
+  services.tailscale.enable = true;
 
   # Install neovim
   programs.neovim = {
@@ -162,10 +174,15 @@
 
     # Net tools
     pkgs.nettools
+    netcat-gnu
+    pkgs.inetutils
+    pkgs.socat
 
+    htop
     ghostty
     pkgs.git
     pkgs.vscode
+    pkgs.terraform
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
   ];
@@ -181,10 +198,19 @@
   # List services that you want to enable:
 
   # Enable the OpenSSH daemon.
-  # services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+
+    settings = {
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "no";
+      PubkeyAuthentication = true;
+    };
+  };
 
   # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [ 22 ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
