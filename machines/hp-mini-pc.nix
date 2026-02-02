@@ -157,6 +157,9 @@
 
   environment.variables.EDITOR = "nvim";
 
+  # Install docker
+  virtualisation.docker.enable = true;
+
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
@@ -178,6 +181,7 @@
     pkgs.inetutils
     pkgs.socat
 
+    pkgs.bcc
     htop
     ghostty
     pkgs.git
@@ -186,6 +190,9 @@
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
   ];
+
+  boot.extraModulePackages = [ pkgs.bcc ];
+
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
