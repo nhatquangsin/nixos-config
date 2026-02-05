@@ -88,7 +88,11 @@
     #  thunderbird
     ];
     shell = pkgs.zsh;
+
+    hashedPassword = "$6$9wZvN2e6wIucUB8Q$48PfbBcaF7pkxkBTk5z42bRHxWBSpPg1cCeogVNw1LzvsMoCRSCTFzMmRYB7mBxZwpoOxQ5DfUrJiOoz4eOOL1";
   };
+
+  users.mutableUsers = false;
 
   users.users.quang = {
     isNormalUser = true;
@@ -97,6 +101,8 @@
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDcf5viA9mrgmF0oziA7ab4+Rx+Rw2JuwQ394uQTyaxb quangtruong@MacBookPro"
     ];
+
+    hashedPassword = "$6$hMcSBAnGOHkGLR5C$vq2aJgvtSFYgR6cy1FB2SLEgS9fBwdg5CSqZBvnx4lc8mYK/NdzMrc6yNcGjR4Aphhsq/7vmUxMGrhgPhdAJX0";
   };
 
   # Install firefox.
@@ -160,6 +166,71 @@
   # Install docker
   virtualisation.docker.enable = true;
 
+  services.vaultwarden = {
+    enable = true;
+
+    config = {
+      DOMAIN = "https://vault.quangtmn.com";
+
+      SIGNUPS_ALLOWED = false;
+
+      # HTTP (Rocket)
+      ROCKET_ADDRESS = "127.0.0.1";
+      ROCKET_PORT = 8222;
+
+      # WebSocket notifications
+      WEBSOCKET_ENABLED = true;
+      WEBSOCKET_ADDRESS = "127.0.0.1";
+      WEBSOCKET_PORT = 3012;
+    };
+  };
+
+  services.caddy = {
+    enable = true;
+
+    environmentFile = "/etc/nixos/cloudflare.env";
+
+    #virtualHosts."vault.quangtmn.com".extraConfig = ''
+      #reverse_proxy /notifications/hub/negotiate 127.0.0.1:8222
+      #reverse_proxy /notifications/hub 127.0.0.1:3012
+      #reverse_proxy 127.0.0.1:8222
+    #'';
+
+    package = pkgs.caddy.withPlugins {
+      plugins = [ "github.com/caddy-dns/cloudflare@v0.2.2" ];
+      hash = "sha256-dnhEjopeA0UiI+XVYHYpsjcEI6Y1Hacbi28hVKYQURg=";
+    };
+
+    virtualHosts."vault.quangtmn.com".extraConfig = ''
+      tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+      }
+
+      reverse_proxy /notifications/hub/negotiate 127.0.0.1:8222
+      reverse_proxy /notifications/hub 127.0.0.1:3012
+
+      reverse_proxy 127.0.0.1:8222
+    '';
+  };
+
+  services.logind = {
+    settings.Login = {
+      HandleSuspendKey = "ignore";
+      HandleHibernateKey = "ignore";
+      HandleLidSwitch = "ignore";
+      HandleLidSwitchExternalPower = "ignore";
+      IdleAction = "ignore";
+      # Optional: if you want to ensure it never triggers
+      # IdleActionSec = "0";
+    };
+  };
+
+  systemd.targets.sleep.enable = false;
+  systemd.targets.suspend.enable = false;
+  systemd.targets.hibernate.enable = false;
+  systemd.targets.hybrid-sleep.enable = false;
+
+
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
@@ -217,10 +288,14 @@
   };
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 22 ];
+  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
+
+  networking.extraHosts = ''
+    # 100.77.75.68  vaultwarden.local
+  '';
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
