@@ -14,7 +14,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "nixos-hp-laptop"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
@@ -93,6 +93,17 @@
   };
 
   users.mutableUsers = false;
+
+  users.users.quang = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDcf5viA9mrgmF0oziA7ab4+Rx+Rw2JuwQ394uQTyaxb quangtruong@MacBookPro"
+    ];
+
+    hashedPassword = "$6$hMcSBAnGOHkGLR5C$vq2aJgvtSFYgR6cy1FB2SLEgS9fBwdg5CSqZBvnx4lc8mYK/NdzMrc6yNcGjR4Aphhsq/7vmUxMGrhgPhdAJX0";
+  };
 
   # Install firefox.
   programs.firefox.enable = true;
@@ -176,6 +187,8 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
+  services.resolved.enable = true;
+
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -193,6 +206,7 @@
     netcat-gnu
     pkgs.inetutils
     pkgs.socat
+    tcpdump
 
     pkgs.bcc
     htop
@@ -202,6 +216,9 @@
     pkgs.terraform
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
+    
+    systemd
+    debootstrap
   ];
 
   boot.extraModulePackages = [ pkgs.bcc ];
