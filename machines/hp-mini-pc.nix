@@ -89,6 +89,10 @@
     ];
     shell = pkgs.zsh;
 
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDcf5viA9mrgmF0oziA7ab4+Rx+Rw2JuwQ394uQTyaxb quangtruong@MacBookPro"
+    ];
+
     hashedPassword = "$6$9wZvN2e6wIucUB8Q$48PfbBcaF7pkxkBTk5z42bRHxWBSpPg1cCeogVNw1LzvsMoCRSCTFzMmRYB7mBxZwpoOxQ5DfUrJiOoz4eOOL1";
   };
 
@@ -98,12 +102,22 @@
     isNormalUser = true;
     extraGroups = [ "wheel" ];
 
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDcf5viA9mrgmF0oziA7ab4+Rx+Rw2JuwQ394uQTyaxb quangtruong@MacBookPro"
-    ];
-
     hashedPassword = "$6$hMcSBAnGOHkGLR5C$vq2aJgvtSFYgR6cy1FB2SLEgS9fBwdg5CSqZBvnx4lc8mYK/NdzMrc6yNcGjR4Aphhsq/7vmUxMGrhgPhdAJX0";
   };
+
+  users.groups.ejabberd = { };
+  users.users.ejabberd = {
+    isSystemUser = true;
+    group = "ejabberd";
+    extraGroups = [
+      "ejabberd"  # optional but harmless
+      # add any group needed for cert read access if you use group-based perms
+      # "acme"
+    ];
+  };
+
+  # Install Hyprland
+  programs.hyprland.enable = true;
 
   # Install firefox.
   programs.firefox.enable = true;
@@ -166,6 +180,7 @@
   # Install docker
   virtualisation.docker.enable = true;
 
+  # Install vaultwarden
   services.vaultwarden = {
     enable = true;
 
@@ -185,6 +200,7 @@
     };
   };
 
+  # Install caddy
   services.caddy = {
     enable = true;
 
@@ -211,6 +227,55 @@
 
       reverse_proxy 127.0.0.1:8222
     '';
+
+    virtualHosts."xmpp.quangtmn.com".extraConfig = ''
+      tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+      }
+
+      # WebSocket endpoint for Fluux
+      reverse_proxy /ws 127.0.0.1:5280
+
+      # Optional: ejabberd web admin (tailscale-only still)
+      # reverse_proxy /admin 127.0.0.1:5280
+    '';
+
+    virtualHosts."chat.quangtmn.com".extraConfig = ''
+      tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+      }
+
+      root * /srv/converse
+      file_server
+
+      reverse_proxy /ws 127.0.0.1:5280
+    '';
+  };
+
+  # Install acme
+  security.acme = {
+    acceptTerms = true;
+    defaults = {
+      email = "me@quangtmn.com";
+    };
+
+    certs."xmpp.quangtmn.com" = {
+      dnsProvider = "cloudflare";
+      credentialsFile = "/etc/nixos/cloudflare.env";
+      group = "ejabberd";
+    };
+
+    certs."quangtmn.com" = {
+      dnsProvider = "cloudflare";
+      credentialsFile = "/etc/nixos/cloudflare.env";
+    };
+  };
+
+  # Install ejabberd
+  services.ejabberd = {
+    enable = true;
+
+    configFile = "/var/lib/ejabberd/ejabberd.yml";
   };
 
   services.logind = {
@@ -233,6 +298,7 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+
 
   services.resolved.enable = true;
 
@@ -261,6 +327,7 @@
     pkgs.git
     pkgs.vscode
     pkgs.terraform
+    pkgs.kitty
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
     
@@ -294,10 +361,12 @@
   };
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
+  networking.firewall.allowedTCPPorts = [ 22 80 ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
+
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 443 5222 5280 ];
 
   networking.extraHosts = ''
     # 100.77.75.68  vaultwarden.local
